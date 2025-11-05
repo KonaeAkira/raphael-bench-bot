@@ -11,16 +11,17 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 struct User {
     login: String,
+    id: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Issue {
-    number: u32,
+    number: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct Comment {
-    author_association: String,
+    user: User,
     body: String,
 }
 
@@ -58,10 +59,10 @@ fn checkout_and_build_raphael_cli_on_branch(branch_name: &str) {
         .unwrap();
 }
 
-fn checkout_and_build_raphael_cli_on_pr(pr_number: u32) {
+fn checkout_and_build_raphael_cli_on_pr(pr_number: &str) {
     let raphael_dir = std::env::var("RAPHAEL_DIR").expect("missing RAPHAEL_DIR var");
     Command::new("gh")
-        .args(["pr", "checkout", &pr_number.to_string()])
+        .args(["pr", "checkout", pr_number])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
@@ -80,7 +81,7 @@ fn run_benchmark_script() -> String {
 fn create_comment_on_issue(payload: &Payload, message: String) {
     let owner = &payload.repository.owner.login;
     let repo = &payload.repository.name;
-    let number = payload.issue.number;
+    let number = &payload.issue.number;
     Command::new("gh")
         .args(["api", "--method", "POST"])
         .args(["-H", "Accept: application/vnd.github+json"])
@@ -102,7 +103,7 @@ fn run_benchmark_job(payload: Payload) {
         run_benchmark_script()
     )
     .unwrap();
-    checkout_and_build_raphael_cli_on_pr(payload.issue.number);
+    checkout_and_build_raphael_cli_on_pr(&payload.issue.number);
     writeln!(
         message,
         "Benchmarking `pr {}`:\n{}\n\n",
@@ -117,8 +118,9 @@ fn run_benchmark_job(payload: Payload) {
 async fn webhook_handler(GithubEvent(payload): GithubEvent<Payload>) -> impl IntoResponse {
     dbg!(&payload);
     if payload.action == "created"
-        && payload.comment.author_association == "OWNER"
-        && payload.comment.body.trim() == "/bench"
+        && payload.comment.user.login == "KonaeAkira"
+        && payload.comment.user.id == "31180380"
+        && payload.comment.body.contains("@RaphaelBencher")
     {
         std::thread::spawn(move || run_benchmark_job(payload));
         StatusCode::OK
