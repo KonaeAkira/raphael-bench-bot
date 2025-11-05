@@ -1,19 +1,32 @@
 use std::sync::Arc;
 
-use axum::Router;
 use axum::response::IntoResponse;
 use axum::routing::post;
+use axum::{Router, http::StatusCode};
 use axum_github_webhook_extract::{GithubEvent, GithubToken};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
-struct Event {
-    action: String,
+struct Issue {
+    number: u32,
 }
 
-async fn webhook_handler(GithubEvent(event): GithubEvent<Event>) -> impl IntoResponse {
-    dbg!(&event);
-    event.action
+#[derive(Debug, Deserialize)]
+struct Comment {
+    author_association: String,
+    body: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Payload {
+    action: String,
+    issue: Issue,
+    comment: Comment,
+}
+
+async fn webhook_handler(GithubEvent(payload): GithubEvent<Payload>) -> impl IntoResponse {
+    dbg!(&payload);
+    StatusCode::OK
 }
 
 #[tokio::main]
