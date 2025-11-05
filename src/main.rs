@@ -9,6 +9,11 @@ use axum_github_webhook_extract::{GithubEvent, GithubToken};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
+struct User {
+    login: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct Issue {
     number: u32,
 }
@@ -21,6 +26,8 @@ struct Comment {
 
 #[derive(Debug, Deserialize)]
 struct Repository {
+    name: String,
+    owner: User,
     default_branch: String,
 }
 
@@ -65,13 +72,46 @@ fn checkout_and_build_raphael_cli_on_pr(pr_number: u32) {
         .unwrap();
 }
 
-fn run_benchmark() -> String {
-    let scripts_dir = "./scripts";
-    let output = Command::new("bench-solver.sh")
-        .current_dir(scripts_dir)
-        .output()
-        .unwrap();
+fn run_benchmark_script() -> String {
+    let output = Command::new("./scripts/bench-solver.sh").output().unwrap();
     String::from_utf8(output.stdout).unwrap()
+}
+
+fn create_comment_on_issue(payload: &Payload, message: String) {
+    let owner = &payload.repository.owner.login;
+    let repo = &payload.repository.name;
+    let number = payload.issue.number;
+    Command::new("gh")
+        .args(["api", "--method", "POST"])
+        .args(["-H", "Accept: application/vnd.github+json"])
+        .args(["-H", "X-GitHub-Api-Version: 2022-11-28"])
+        .arg(format!("/repos/{owner}/{repo}/issues/{number}/comments"))
+        .arg("-f")
+        .arg(format!("body={message}"))
+        .status()
+        .unwrap();
+}
+
+fn run_benchmark_job(payload: Payload) {
+    let mut message = String::new();
+    checkout_and_build_raphael_cli_on_branch(&payload.repository.default_branch);
+    writeln!(
+        message,
+        "Benchmarking `{}`:\n{}\n\n",
+        payload.repository.default_branch,
+        run_benchmark_script()
+    )
+    .unwrap();
+    checkout_and_build_raphael_cli_on_pr(payload.issue.number);
+    writeln!(
+        message,
+        "Benchmarking `pr {}`:\n{}\n\n",
+        payload.issue.number,
+        run_benchmark_script()
+    )
+    .unwrap();
+    dbg!(&message);
+    create_comment_on_issue(&payload, message);
 }
 
 async fn webhook_handler(GithubEvent(payload): GithubEvent<Payload>) -> impl IntoResponse {
@@ -80,29 +120,11 @@ async fn webhook_handler(GithubEvent(payload): GithubEvent<Payload>) -> impl Int
         && payload.comment.author_association == "OWNER"
         && payload.comment.body.trim() == "/bench"
     {
-        let mut message = String::new();
-
-        checkout_and_build_raphael_cli_on_branch(&payload.repository.default_branch);
-        writeln!(
-            message,
-            "Benchmarking `{}`:\n{}\n\n",
-            payload.repository.default_branch,
-            run_benchmark()
-        )
-        .unwrap();
-
-        checkout_and_build_raphael_cli_on_pr(payload.issue.number);
-        writeln!(
-            message,
-            "Benchmarking `pr {}`:\n{}\n\n",
-            payload.issue.number,
-            run_benchmark()
-        )
-        .unwrap();
-
-        dbg!(&message);
+        std::thread::spawn(move || run_benchmark_job(payload));
+        StatusCode::OK
+    } else {
+        StatusCode::BAD_REQUEST
     }
-    StatusCode::OK
 }
 
 #[tokio::main]
