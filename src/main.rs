@@ -11,12 +11,12 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 struct User {
     login: String,
-    id: String,
+    id: u64,
 }
 
 #[derive(Debug, Deserialize)]
 struct Issue {
-    number: String,
+    number: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,10 +59,10 @@ fn checkout_and_build_raphael_cli_on_branch(branch_name: &str) {
         .unwrap();
 }
 
-fn checkout_and_build_raphael_cli_on_pr(pr_number: &str) {
+fn checkout_and_build_raphael_cli_on_pr(pr_number: u64) {
     let raphael_dir = std::env::var("RAPHAEL_DIR").expect("missing RAPHAEL_DIR var");
     Command::new("gh")
-        .args(["pr", "checkout", pr_number])
+        .args(["pr", "checkout", &pr_number.to_string()])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
@@ -103,7 +103,7 @@ fn run_benchmark_job(payload: Payload) {
         run_benchmark_script()
     )
     .unwrap();
-    checkout_and_build_raphael_cli_on_pr(&payload.issue.number);
+    checkout_and_build_raphael_cli_on_pr(payload.issue.number);
     writeln!(
         message,
         "Benchmarking `pr {}`:\n{}\n\n",
@@ -119,7 +119,7 @@ async fn webhook_handler(GithubEvent(payload): GithubEvent<Payload>) -> impl Int
     dbg!(&payload);
     if payload.action == "created"
         && payload.comment.user.login == "KonaeAkira"
-        && payload.comment.user.id == "31180380"
+        && payload.comment.user.id == 31180380
         && payload.comment.body.contains("@RaphaelBencher")
     {
         std::thread::spawn(move || run_benchmark_job(payload));
