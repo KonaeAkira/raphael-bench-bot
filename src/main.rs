@@ -1,24 +1,19 @@
-use axum::extract::FromRef;
+use std::sync::Arc;
+
+use axum::Router;
+use axum::response::IntoResponse;
 use axum::routing::post;
-use axum::{Json, Router};
-use axum_standardwebhooks::{SharedWebhook, StandardWebhook, Webhook};
-use serde_json::Value;
+use axum_github_webhook_extract::{GithubEvent, GithubToken};
+use serde::Deserialize;
 
-async fn webhook_handler(StandardWebhook(Json(payload)): StandardWebhook<Json<Value>>) -> String {
-    // The webhook signature has been verified, and we can safely use the payload
-    dbg!(&payload);
-    format!("Received webhook: {}", payload)
+#[derive(Debug, Deserialize)]
+struct Event {
+    action: String,
 }
 
-#[derive(Clone)]
-struct AppState {
-    webhook: SharedWebhook,
-}
-
-impl FromRef<AppState> for SharedWebhook {
-    fn from_ref(state: &AppState) -> Self {
-        state.webhook.clone()
-    }
+async fn webhook_handler(GithubEvent(event): GithubEvent<Event>) -> impl IntoResponse {
+    dbg!(&event);
+    event.action
 }
 
 #[tokio::main]
@@ -26,9 +21,7 @@ async fn main() {
     let secret = std::env::var("GITHUB_WEBHOOK_SECRET").unwrap();
     let app = Router::new()
         .route("/webhooks", post(webhook_handler))
-        .with_state(AppState {
-            webhook: SharedWebhook::new(Webhook::new(&secret).unwrap()),
-        });
+        .with_state(GithubToken(Arc::new(secret)));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();

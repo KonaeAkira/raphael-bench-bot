@@ -61,6 +61,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-github-webhook-extract"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ade184b16d2b1a0c5881df1329cd2e8132d265a3ec0fa6046bd1b4ae2f9af331"
+dependencies = [
+ "axum",
+ "hex",
+ "hmac-sha256",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "subtle",
+ "tracing",
+]
+
+[[package]]
 name = "axum-standardwebhooks"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -140,6 +156,12 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hmac-sha256"
@@ -336,6 +358,7 @@ name = "raphael-bench-bot"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "axum-github-webhook-extract",
  "axum-standardwebhooks",
  "serde",
  "serde_json",
@@ -355,6 +378,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a8e94ea7f378bd32cbbd37198a4a91436180c5bb472411e48b5ec2e2124ae9e"
 dependencies = [
  "serde_core",
+ "serde_derive",
 ]
 
 [[package]]
@@ -441,6 +465,12 @@ dependencies = [
  "thiserror",
  "time",
 ]
+
+[[package]]
+name = "subtle"
+version = "2.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "syn"
@@ -559,7 +589,19 @@ checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
  "log",
  "pin-project-lite",
+ "tracing-attributes",
  "tracing-core",
+]
+
+[[package]]
+name = "tracing-attributes"
+version = "0.1.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81383ab64e72a7a8b8e13130c49e3dab29def6d0c7d76a03087b3cf71c5c6903"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
