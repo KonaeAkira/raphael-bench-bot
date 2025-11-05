@@ -34,11 +34,18 @@ struct Payload {
 
 fn checkout_and_build_raphael_cli_on_branch(branch_name: &str) {
     let raphael_dir = std::env::var("RAPHAEL_DIR").expect("missing RAPHAEL_DIR var");
-    Command::new(format!("git checkout {branch_name}"))
+    Command::new("git")
+        .args(["checkout", branch_name])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
-    Command::new(format!("cargo install --path raphael-cli"))
+    Command::new("git")
+        .arg("pull")
+        .current_dir(&raphael_dir)
+        .status()
+        .unwrap();
+    Command::new("cargo")
+        .args(["install", "--path", "raphael-cli"])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
@@ -46,11 +53,13 @@ fn checkout_and_build_raphael_cli_on_branch(branch_name: &str) {
 
 fn checkout_and_build_raphael_cli_on_pr(pr_number: u32) {
     let raphael_dir = std::env::var("RAPHAEL_DIR").expect("missing RAPHAEL_DIR var");
-    Command::new(format!("gh pr checkout {pr_number}"))
+    Command::new("gh")
+        .args(["pr", "checkout", &pr_number.to_string()])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
-    Command::new(format!("cargo install --path raphael-cli"))
+    Command::new("cargo")
+        .args(["install", "--path", "raphael-cli"])
         .current_dir(&raphael_dir)
         .status()
         .unwrap();
